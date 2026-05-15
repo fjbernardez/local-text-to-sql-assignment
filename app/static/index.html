@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Local Sales Text-to-SQL</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="card dataset-card" aria-labelledby="dataset-title">
+        <p class="eyebrow">Dataset</p>
+        <h1 id="dataset-title">data.csv sales dataset</h1>
+        <p class="dataset-copy">
+          Local sales records loaded into PostgreSQL. Each row represents one sold
+          product line inside a ticket or order.
+        </p>
+        <div class="schema-preview" aria-label="Available columns">
+          <p>One sales row</p>
+          <div class="schema-table-wrap">
+            <table class="schema-table">
+              <thead>
+                <tr>
+                  <th>date</th>
+                  <th>week_day</th>
+                  <th>hour</th>
+                  <th>ticket_number</th>
+                  <th>waiter</th>
+                  <th>product_name</th>
+                  <th>quantity</th>
+                  <th>unitary_price</th>
+                  <th>total</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="question-view" aria-labelledby="question-title">
+        <div class="section-heading">
+          <p class="eyebrow">Ask</p>
+          <h2 id="question-title">Ask a sales question</h2>
+        </div>
+
+        <form id="ask-form">
+          <label for="question">Question</label>
+          <textarea
+            id="question"
+            name="question"
+            rows="5"
+            placeholder="What are the top 5 products by quantity sold?"
+            required
+          ></textarea>
+
+          <label class="field-row" for="max-rows">
+            <span>Maximum returned rows</span>
+            <input id="max-rows" name="max_rows" type="number" min="1" max="100" value="50" />
+          </label>
+
+          <label class="toggle-row" for="natural-answer">
+            <input id="natural-answer" type="checkbox" checked />
+            <span>Generate natural language answer</span>
+          </label>
+
+          <button id="submit-button" type="submit">Ask question</button>
+        </form>
+
+        <div class="status" id="loading-status" hidden aria-live="polite">
+          <p>Generating SQL and querying the database...</p>
+          <p id="natural-loading-note">
+            This may take a few extra minutes because a second local model is used.
+          </p>
+        </div>
+      </section>
+
+      <section class="card result-card" id="result-view" hidden aria-live="polite">
+        <div class="section-heading">
+          <p class="eyebrow">Result</p>
+          <h2 id="result-title">Query result</h2>
+        </div>
+
+        <div id="error-panel" class="error-panel" hidden>
+          <p id="error-message"></p>
+          <details id="error-details">
+            <summary>Details</summary>
+            <pre id="error-technical"></pre>
+          </details>
+        </div>
+
+        <div id="response-panel" hidden>
+          <p class="response-message" id="response-message"></p>
+          <p class="natural-message" id="natural-message" hidden></p>
+
+          <div id="sql-section" hidden>
+            <h3>Generated SQL</h3>
+            <pre class="sql-block"><code id="sql-output"></code></pre>
+          </div>
+
+          <div id="table-section" hidden>
+            <h3>Returned data</h3>
+            <div class="table-wrap">
+              <table id="data-table"></table>
+            </div>
+          </div>
+        </div>
+
+        <button id="reset-button" type="button">Ask another question</button>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

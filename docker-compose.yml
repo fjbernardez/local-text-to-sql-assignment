@@ -1,0 +1,97 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sql-assignment-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  ollama-models-init:
+    image: ollama/ollama:latest
+    container_name: sql-assignment-ollama-models-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL_SQL: ${OLLAMA_MODEL_SQL:-qwen2.5-coder:3b}
+      OLLAMA_MODEL_NL: ${OLLAMA_MODEL_NL:-llama3.2:3b}
+    volumes:
+      - ./infra/ollama/init-models.sh:/init/init-models.sh:ro
+    entrypoint: ["/bin/sh", "/init/init-models.sh"]
+
+  postgres:
+    image: postgres:16
+    container_name: sql-assignment-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: salesdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d salesdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  csv-loader:
+    image: postgres:16
+    container_name: sql-assignment-csv-loader
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: salesdb
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    volumes:
+      - ./infra/db/init-data.sh:/init/init-data.sh:ro
+      - ./data/data.csv:/data/data.csv:ro
+    entrypoint: ["/bin/sh", "/init/init-data.sh"]
+
+  backend:
+    build: .
+    container_name: sql-assignment-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      csv-loader:
+        condition: service_completed_successfully
+      ollama:
+        condition: service_healthy
+      ollama-models-init:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: salesdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL_SQL: ${OLLAMA_MODEL_SQL:-qwen2.5-coder:3b}
+      OLLAMA_MODEL_NL: ${OLLAMA_MODEL_NL:-llama3.2:3b}
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-300}
+      OLLAMA_TEMPERATURE_SQL: ${OLLAMA_TEMPERATURE_SQL:-0}
+      OLLAMA_TEMPERATURE_NL: ${OLLAMA_TEMPERATURE_NL:-0.2}
+      OLLAMA_TOP_P: ${OLLAMA_TOP_P:-1}
+      OLLAMA_NUM_PREDICT_SQL: ${OLLAMA_NUM_PREDICT_SQL:-512}
+      OLLAMA_NUM_PREDICT_NL: ${OLLAMA_NUM_PREDICT_NL:-512}
+
+volumes:
+  ollama_data:
+  postgres_data:
